@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Countdown</title>
+        <style>
+            body {
+                margin-left: auto;
+                margin-right: auto;
+                width: 40%;
+            }
+
+            #app {
+                text-align: center;
+                margin-top: 30px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            #action {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+                justify-content: center;
+            }
+
+            #action button {
+                padding: 30px;
+                font-size: 3rem;
+            }
+
+            button:hover {
+                font-size: 3rem;
+                background-color: blue;
+                color: white;
+                cursor: pointer;
+            }
+
+            .select__count__button {
+                background-color: blue;
+                color: white;
+            }
+
+            #result {
+                font-size: 10rem;
+                text-align: center;
+            }
+
+            #result p {
+                font-size: 20px;
+                text-align: right;
+            }
+
+            footer {
+                text-align: right;
+            }
+
+            .online {
+                background-color: green;
+                color: white;
+            }
+
+            .offline {
+                background-color: red;
+                color:  white;
+            }
+
+            #status {
+                width: 5px;
+                padding: 5px;
+                border: 1px solid gray;
+                border-radius: 5px;
+            }
+
+            #refresh__ws {
+                font-size:22px;
+                border-radius: 5px;
+                border: 1px solid gray;
+                margin-right: 5px;'
+            }
+
+            #refresh__ws:hover {
+                cursor: pointer;
+                background-color: blue;
+                color: white;
+            }
+
+        </style>
+    </head>
+    <body>
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+        <div id="app">
+            <p>{{message}}</p>
+            <div id="action">
+                <button v-for="number in [10,20,30,40,50]" @click="logValue(number)" :class="selectedCount === number ? 'select__count__button' : ''" :disabled="!wsStatus">{{ number }}</button>
+            </div>
+            <div id="result">
+                {{ counterValue }}
+                <p v-if="selectedCount">Will count until : {{selectedCount}}</p>
+            </div>
+
+            <footer>
+                <hr/>
+                <span id="refresh__ws" v-if="!wsStatus" @click="resetWs">&#8634;</span>
+                <span id="status" :class="wsStatus ? 'online' : 'offline'">{{ wsStatus ? 'Online' : 'Offline'}}</span>
+                <small> &copy;all rights reserved! </small>
+            </footer>
+        </div>
+
+        <script>
+            const { createApp, ref, onMounted } = Vue
+            const host = "localhost:8080"
+            const wsHost = `ws://${host}`
+            createApp({
+                setup() {
+                    const message = ref('Click any button to begin the countdown:')
+                    const selectedCount = ref(0)
+                    const counterValue = ref(0)
+                    const socket = ref(null)
+                    const wsStatus = ref(false)
+
+                    const logValue = (v) => {
+                        selectedCount.value = v;
+                        sendMessage(v);
+                    }
+
+                    const sendMessage = (message) => {
+                        socket.value.send(message);
+                    }
+
+                    const resetWs = () => {
+                        socket.value = new WebSocket(`${wsHost}/ws/countdown`);
+
+                        socket.value.onopen = function(event) {
+                            wsStatus.value = true
+                        };
+
+                        socket.value.onmessage = function(event) {
+                            counterValue.value = event.data
+                        };
+
+                        socket.value.onclose = function(event) {
+                            wsStatus.value = false
+                        };
+                    }
+
+                    onMounted(() => {
+                        resetWs()
+                    })
+
+                    return {
+                        message, counterValue, selectedCount, logValue, wsStatus, resetWs
+                    }
+                }
+            }).mount('#app')
+        </script>
+    </body>
+</html>
